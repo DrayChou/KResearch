@@ -1,9 +1,11 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { synthesizeReport, rewriteReport, clarifyQuery, runIterativeDeepResearch, generateVisualReport, regenerateVisualReportWithFeedback } from '../services';
 import { ResearchUpdate, FinalResearchData, ResearchMode, FileData, AppState, ClarificationTurn, Citation, HistoryItem } from '../types';
-import { AllKeysFailedError, apiKeyService, historyService } from '../services';
+import { AllKeysFailedError, apiKeyService, historyService, getAIClient } from '../services';
 import { useNotification } from '../contextx/NotificationContext';
 import { executeSingleSearch } from '../services/search';
+import { getTranslationService, TranslationState } from '../services/translation';
+import { getModel } from '../services/models';
 
 const getCleanErrorMessage = (error: any): string => {
     if (!error) return 'An unknown error occurred.';
@@ -60,6 +62,12 @@ export const useAppLogic = () => {
     const [isSettingsOpen, setIsSettingsOpen] = useState<boolean>(false);
     const [history, setHistory] = useState<HistoryItem[]>(() => historyService.getHistory());
     const [currentHistoryId, setCurrentHistoryId] = useState<string | null>(null);
+    const [translationState, setTranslationState] = useState<TranslationState>({
+        currentLanguage: 'en',
+        translatedReports: new Map(),
+        isTranslating: false,
+        translationError: undefined
+    });
 
     const abortControllerRef = useRef<AbortController | null>(null);
     const fileInputRef = useRef<HTMLInputElement | null>(null);
@@ -460,6 +468,73 @@ export const useAppLogic = () => {
         addNotification({type: 'info', title: 'History cleared', message: 'All items have been removed from your research history.'});
     };
 
+    const handleTranslateReport = useCallback(async (reportId: string, reportContent: string) => {
+        if (!reportContent.trim()) return;
+
+        setTranslationState(prev => ({
+            ...prev,
+            isTranslating: true,
+            translationError: undefined
+        }));
+
+        try {
+            const aiClient = getAIClient();
+            const translationService = getTranslationService(aiClient);
+            
+            // Get the planner model for translation
+            const plannerModel = getModel('planner', mode);
+
+            const translatedContent = await translationService.translateReport(
+                reportContent,
+                translationState.currentLanguage === 'en' ? 'zh' : 'en',
+                plannerModel
+            );
+
+            setTranslationState(prev => ({
+                ...prev,
+                translatedReports: new Map(prev.translatedReports.set(reportId, translatedContent)),
+                isTranslating: false
+            }));
+
+            addNotification({
+                type: 'success',
+                title: 'Translation Complete',
+                message: `Report translated to ${translationState.currentLanguage === 'en' ? 'Chinese' : 'English'}`
+            });
+
+        } catch (error) {
+            console.error('Translation failed:', error);
+            const message = getCleanErrorMessage(error);
+            setTranslationState(prev => ({
+                ...prev,
+                isTranslating: false,
+                translationError: message
+            }));
+            addNotification({
+                type: 'error',
+                title: 'Translation Failed',
+                message
+            });
+        }
+    }, [translationState.currentLanguage, addNotification]);
+
+    const handleToggleLanguage = useCallback(() => {
+        setTranslationState(prev => ({
+            ...prev,
+            currentLanguage: prev.currentLanguage === 'en' ? 'zh' : 'en'
+        }));
+    }, []);
+
+    const handleClearTranslation = useCallback((reportId: string) => {
+        setTranslationState(prev => {
+            const newTranslatedReports = new Map(prev.translatedReports);
+            newTranslatedReports.delete(reportId);
+            return {
+                ...prev,
+                translatedReports: newTranslatedReports
+            };
+        });
+    }, []);
 
     return {
         query, setQuery, guidedQuery, setGuidedQuery, selectedFile, researchUpdates, finalData, mode, setMode, appState,
@@ -471,6 +546,10 @@ export const useAppLogic = () => {
         handleVisualizerFeedback,
         handleContinueResearch,
         handleGenerateReportFromPause,
-        history, loadFromHistory, deleteHistoryItem, clearHistory
+        history, loadFromHistory, deleteHistoryItem, clearHistory,
+        translationState,
+        handleTranslateReport,
+        handleToggleLanguage,
+        handleClearTranslation
     };
 };

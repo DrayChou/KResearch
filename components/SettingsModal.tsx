@@ -3,6 +3,7 @@ import { useNotification } from '../contextx/NotificationContext';
 import { apiKeyService } from '../services/apiKeyService';
 import { DEFAULT_SETTINGS, settingsService } from '../services/settingsService';
 import { ResearchMode } from '../types';
+import { useLanguage } from '../services/i18n';
 import GlassCard from './GlassCard';
 import LiquidButton from './LiquidButton';
 import Spinner from './Spinner';
@@ -26,6 +27,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, currentM
   const [provider, setProvider] = useState(() => settingsService.getSettings().apiConfig.provider);
   const [openaiApiKey, setOpenaiApiKey] = useState(() => settingsService.getSettings().apiConfig.openaiApiKey || '');
   
+  const { t } = useLanguage();
   const addNotification = useNotification();
   
   useEffect(() => {
@@ -74,15 +76,15 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, currentM
     setBaseUrl('');
     setProvider('gemini');
     setOpenaiApiKey('');
-    addNotification({type: 'info', title: 'Defaults Loaded', message: 'Settings have been reset to default and saved.'});
+    addNotification({type: 'info', title: t('success'), message: t('resetSettings')});
   };
 
   if (!isRendered) return null;
 
   const tabs = [
-    { id: 'api', label: 'API Key' },
-    { id: 'params', label: 'Parameters' },
-    { id: 'models', label: 'Models' },
+    { id: 'api', label: t('apiKeys') },
+    { id: 'params', label: t('parameters') },
+    { id: 'models', label: t('modelSettings') },
   ];
 
   return (
@@ -96,8 +98,8 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, currentM
         onClick={(e) => e.stopPropagation()}
       >
         <header className="flex items-center justify-between p-6 shrink-0 border-b border-border-light dark:border-border-dark">
-          <h2 className="text-2xl font-bold">Settings</h2>
-          <button onClick={onClose} className="p-2 rounded-full hover:bg-black/10 dark:hover:bg-white/10 transition-colors" title="Close"><svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" /></svg></button>
+          <h2 className="text-2xl font-bold">{t('settings')}</h2>
+          <button onClick={onClose} className="p-2 rounded-full hover:bg-black/10 dark:hover:bg-white/10 transition-colors" title={t('close')}><svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" /></svg></button>
         </header>
 
         <div className="flex flex-col md:flex-row flex-grow min-h-0">
@@ -124,9 +126,9 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, currentM
         </div>
 
         <footer className="flex justify-between items-center gap-3 mt-auto p-6 border-t border-border-light dark:border-border-dark">
-            <LiquidButton onClick={handleRestoreDefaults} className="bg-red-500/10 hover:bg-red-500/20 text-red-700 dark:text-red-300 border-red-500/20">Restore Defaults</LiquidButton>
+            <LiquidButton onClick={handleRestoreDefaults} className="bg-red-500/10 hover:bg-red-500/20 text-red-700 dark:text-red-300 border-red-500/20">{t('resetSettings')}</LiquidButton>
             <div className="flex items-center gap-3">
-                <LiquidButton onClick={onClose} className="bg-transparent hover:bg-black/5 dark:hover:bg-white/5 text-gray-600 dark:text-gray-400 hover:shadow-none hover:-translate-y-0 active:translate-y-px">Close</LiquidButton>
+                <LiquidButton onClick={onClose} className="bg-transparent hover:bg-black/5 dark:hover:bg-white/5 text-gray-600 dark:text-gray-400 hover:shadow-none hover:-translate-y-0 active:translate-y-px">{t('close')}</LiquidButton>
             </div>
         </footer>
       </GlassCard>

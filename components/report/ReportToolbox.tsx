@@ -10,6 +10,7 @@ const PolishIcon: React.FC = () => <svg xmlns="http://www.w3.org/2000/svg" fill=
 const ReadingLevelIcon: React.FC = () => <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-6 h-6"><path strokeLinecap="round" strokeLinejoin="round" d="M12 6.042A8.967 8.967 0 0 0 6 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 0 1 6 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 0 1 6-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0 0 18 18a8.967 8.967 0 0 0-6 2.292m0-14.25v14.25" /></svg>;
 const LengthIcon: React.FC = () => <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-6 h-6"><path strokeLinecap="round" strokeLinejoin="round" d="M12 3v18M8 7.5h8m-8 9h8" /></svg>;
 const CustomIcon: React.FC = () => <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-6 h-6"><path strokeLinecap="round" strokeLinejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 1-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 0 1 1.13-1.897l8.932-8.931Zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0 1 15.75 21H5.25A2.25 2.25 0 0 1 3 18.75V8.25A2.25 2.25 0 0 1 5.25 6H10" /></svg>;
+const TranslateIcon: React.FC = () => <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-6 h-6"><path strokeLinecap="round" strokeLinejoin="round" d="M10.5 21l5.25-11.25L21 21m-9-3h7.5M3 5.621a48.474 48.474 0 016-.371m0 0c1.12 0 2.233.038 3.334.114M9 5.25V3m3.334 2.364C11.176 10.658 7.69 15.08 3 17.502m9.334-12.138c.896.061 1.785.147 2.666.257m-4.589 8.495a18.023 18.023 0 01-3.827-5.802" /></svg>;
 
 // --- Popover Panels ---
 const SliderPanel: React.FC<{ title: string; options: string[]; onSelect: (value: string) => void; isRewriting: boolean; instructionPrefix: string; defaultOption: string; }> = ({ title, options, onSelect, isRewriting, instructionPrefix, defaultOption }) => {
@@ -108,9 +109,22 @@ const CustomPanel: React.FC<{ onSelect: (instruction: string, file: FileData | n
 interface ReportToolboxProps {
     onRewrite: (instruction: string, file: FileData | null) => void;
     isRewriting: boolean;
+    onTranslate?: () => void;
+    isTranslating?: boolean;
+    showOriginalText?: boolean;
+    onToggleOriginal?: () => void;
+    hasTranslation?: boolean;
 }
 
-const ReportToolbox: React.FC<ReportToolboxProps> = ({ onRewrite, isRewriting }) => {
+const ReportToolbox: React.FC<ReportToolboxProps> = ({ 
+    onRewrite, 
+    isRewriting, 
+    onTranslate, 
+    isTranslating = false,
+    showOriginalText = true,
+    onToggleOriginal,
+    hasTranslation = false
+}) => {
     const [activeTool, setActiveTool] = useState<string | null>(null);
     const popoverRef = useRef<HTMLDivElement>(null);
 
@@ -151,18 +165,50 @@ const ReportToolbox: React.FC<ReportToolboxProps> = ({ onRewrite, isRewriting })
         { id: 'custom', icon: <CustomIcon />, label: 'Custom Edit' },
     ];
 
+    const translationTools = [
+        ...(onTranslate ? [{
+            id: 'translate',
+            icon: isTranslating ? <Spinner /> : <TranslateIcon />,
+            label: hasTranslation ? 'Re-translate' : 'Translate to Chinese',
+            action: onTranslate,
+            disabled: isTranslating || isRewriting,
+            visible: !hasTranslation || showOriginalText
+        }] : []),
+        ...(onToggleOriginal ? [{
+            id: 'toggle-original',
+            icon: <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-6 h-6">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M7.5 21 3 16.5m0 0L7.5 12M3 16.5h18m-7.5-14L21 7.5m0 0L16.5 12M21 7.5H3" />
+            </svg>,
+            label: showOriginalText ? 'Show Translation' : 'Show Original',
+            action: onToggleOriginal,
+            disabled: isTranslating || isRewriting || !hasTranslation,
+            visible: hasTranslation
+        }] : [])
+    ];
+
+    const allTools = [
+        ...tools,
+        ...translationTools.filter(tool => tool.visible)
+    ];
+
     return (
         <GlassCard className="p-2 flex flex-col items-center gap-2">
-            {tools.map(tool => (
+            {allTools.map(tool => (
                 <div key={tool.id} className="relative">
                     <div className="relative group">
-                         <button data-toolbox-button onClick={() => handleToolClick(tool.id)} disabled={isRewriting && activeTool !== tool.id} className={`p-3 rounded-2xl transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed ${activeTool === tool.id ? 'bg-glow-dark/30 dark:bg-glow-light/20' : 'hover:bg-black/10 dark:hover:bg-white/10'}`} aria-label={tool.label}>
+                         <button 
+                            data-toolbox-button 
+                            onClick={tool.action ? tool.action : () => handleToolClick(tool.id)} 
+                            disabled={tool.disabled || (isRewriting && activeTool !== tool.id)} 
+                            className={`p-3 rounded-2xl transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed ${activeTool === tool.id ? 'bg-glow-dark/30 dark:bg-glow-light/20' : 'hover:bg-black/10 dark:hover:bg-white/10'}`} 
+                            aria-label={tool.label}
+                        >
                             {isRewriting && activeTool === tool.id ? <Spinner/> : tool.icon}
                         </button>
                         <div className="absolute right-full top-1/2 -translate-y-1/2 mr-3 px-2 py-1 bg-gray-900 text-white text-xs rounded-2xl pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-10">{tool.label}</div>
                     </div>
                     
-                    {activeTool === tool.id && (
+                    {activeTool === tool.id && !tool.action && (
                          <div ref={popoverRef} className="absolute right-full top-1/2 -translate-y-1/2 mr-3 w-64 z-20 animate-fade-in">
                             <GlassCard>
                                 {tool.id === 'length' && <SliderPanel title="Adjust Length" options={['Shortest', 'Shorter', 'Current Length', 'Longer', 'Longest']} defaultOption="Current Length" onSelect={handleInstructionSelect} isRewriting={isRewriting} instructionPrefix="Change the length of the report to" />}

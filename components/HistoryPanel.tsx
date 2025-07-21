@@ -1,5 +1,6 @@
 import React from 'react';
 import { HistoryItem } from '../types';
+import { useLanguage } from '../services/i18n';
 import GlassCard from './GlassCard';
 import LiquidButton from './LiquidButton';
 
@@ -13,6 +14,7 @@ interface HistoryPanelProps {
 }
 
 const HistoryPanel: React.FC<HistoryPanelProps> = ({ isOpen, onClose, history, onLoad, onDelete, onClear }) => {
+  const { t } = useLanguage();
   return (
     <div className={`fixed inset-0 z-50 transition-all duration-500 ease-in-out ${isOpen ? 'visible' : 'invisible'}`}>
       {/* Backdrop */}
@@ -30,8 +32,8 @@ const HistoryPanel: React.FC<HistoryPanelProps> = ({ isOpen, onClose, history, o
         `}
       >
         <header className="flex items-center justify-between p-6 shrink-0 border-b border-border-light dark:border-border-dark">
-          <h2 className="text-2xl font-bold">Research History</h2>
-          <button onClick={onClose} className="p-2 rounded-full hover:bg-black/10 dark:hover:bg-white/10 transition-colors" title="Close">
+          <h2 className="text-2xl font-bold">{t('history')}</h2>
+          <button onClick={onClose} className="p-2 rounded-full hover:bg-black/10 dark:hover:bg-white/10 transition-colors" title={t('close')}>
             <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" /></svg>
           </button>
         </header>
@@ -44,18 +46,18 @@ const HistoryPanel: React.FC<HistoryPanelProps> = ({ isOpen, onClose, history, o
                 <div className="flex justify-between items-center">
                   <span className="text-xs text-gray-500 dark:text-gray-400">{new Date(item.date).toLocaleString()}</span>
                   <div className="flex gap-2">
-                    <button onClick={() => onDelete(item.id)} className="p-2 rounded-full text-red-500/80 hover:bg-red-500/10" title="Delete">
+                    <button onClick={() => onDelete(item.id)} className="p-2 rounded-full text-red-500/80 hover:bg-red-500/10" title={t('delete')}>
                       <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
                     </button>
-                    <LiquidButton onClick={() => onLoad(item.id)} className="px-4 py-1.5 text-sm">Load</LiquidButton>
+                    <LiquidButton onClick={() => onLoad(item.id)} className="px-4 py-1.5 text-sm">{t('loadSession')}</LiquidButton>
                   </div>
                 </div>
               </GlassCard>
             ))
           ) : (
             <div className="text-center text-gray-500 dark:text-gray-400 mt-8">
-              <p>No history yet.</p>
-              <p className="text-sm">Completed research will appear here.</p>
+              <p>{t('noHistory')}</p>
+              <p className="text-sm">{t('researchCompleted')} {t('history')}</p>
             </div>
           )}
         </div>
@@ -63,7 +65,7 @@ const HistoryPanel: React.FC<HistoryPanelProps> = ({ isOpen, onClose, history, o
         {history.length > 0 && (
           <footer className="p-6 border-t border-border-light dark:border-border-dark">
             <LiquidButton onClick={onClear} className="w-full bg-red-500/10 hover:bg-red-500/20 text-red-700 dark:text-red-300 border-red-500/20">
-              Clear All History
+              {t('deleteHistory')}
             </LiquidButton>
           </footer>
         )}
