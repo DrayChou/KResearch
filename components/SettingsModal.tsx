@@ -22,14 +22,21 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, currentM
   const [isActive, setIsActive] = useState(false);
   const [settings, setSettings] = useState(() => settingsService.getSettings());
   const [apiKey, setApiKey] = useState(() => apiKeyService.getApiKeysString());
+  const [baseUrl, setBaseUrl] = useState(() => settingsService.getSettings().apiConfig.baseUrl || '');
+  const [provider, setProvider] = useState(() => settingsService.getSettings().apiConfig.provider);
+  const [openaiApiKey, setOpenaiApiKey] = useState(() => settingsService.getSettings().apiConfig.openaiApiKey || '');
   
   const addNotification = useNotification();
   
   useEffect(() => {
     if (isOpen) {
       setIsRendered(true);
-      setSettings(settingsService.getSettings()); // Re-fetch on open
+      const currentSettings = settingsService.getSettings();
+      setSettings(currentSettings); // Re-fetch on open
       setApiKey(apiKeyService.getApiKeysString());
+      setBaseUrl(currentSettings.apiConfig.baseUrl || '');
+      setProvider(currentSettings.apiConfig.provider);
+      setOpenaiApiKey(currentSettings.apiConfig.openaiApiKey || '');
       const timer = setTimeout(() => setIsActive(true), 10);
       return () => clearTimeout(timer);
     } else {
@@ -42,17 +49,31 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, currentM
     if (!isActive) return;
 
     const handler = setTimeout(() => {
-        settingsService.save(settings);
+        // Update settings with all API config
+        const updatedSettings = {
+            ...settings,
+            apiConfig: {
+                provider,
+                baseUrl: baseUrl.trim() || null,
+                openaiApiKey: openaiApiKey.trim() || null
+            }
+        };
+        settingsService.save(updatedSettings);
+        setSettings(updatedSettings);
+        
         if (!apiKeyService.isEnvKey()) {
             apiKeyService.setApiKeys(apiKey);
         }
     }, 500); // Debounce for 500ms
 
     return () => clearTimeout(handler);
-  }, [settings, apiKey, isActive]);
+  }, [settings, apiKey, baseUrl, provider, openaiApiKey, isActive]);
 
   const handleRestoreDefaults = () => {
     setSettings(DEFAULT_SETTINGS);
+    setBaseUrl('');
+    setProvider('gemini');
+    setOpenaiApiKey('');
     addNotification({type: 'info', title: 'Defaults Loaded', message: 'Settings have been reset to default and saved.'});
   };
 
@@ -87,7 +108,16 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, currentM
           </nav>
 
           <main className="p-6 flex-grow overflow-y-auto h-[480px]">
-            {activeTab === 'api' && <ApiSettings apiKey={apiKey} setApiKey={setApiKey} />}
+            {activeTab === 'api' && <ApiSettings 
+              apiKey={apiKey} 
+              setApiKey={setApiKey} 
+              baseUrl={baseUrl} 
+              setBaseUrl={setBaseUrl}
+              provider={provider}
+              setProvider={setProvider}
+              openaiApiKey={openaiApiKey}
+              setOpenaiApiKey={setOpenaiApiKey}
+            />}
             {activeTab === 'models' && <ModelSettings settings={settings} setSettings={setSettings} currentMode={currentMode} />}
             {activeTab === 'params' && <ParamSettings settings={settings} setSettings={setSettings} />}
           </main>

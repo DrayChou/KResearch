@@ -1,7 +1,7 @@
 import { settingsService } from './settingsService';
 import { ResearchMode, AgentRole } from '../types';
 
-const defaultModels: Record<AgentRole, Record<ResearchMode, string>> = {
+const geminiModels: Record<AgentRole, Record<ResearchMode, string>> = {
     planner: {
         Balanced: 'gemini-2.5-pro',
         DeepDive: 'gemini-2.5-pro',
@@ -34,8 +34,55 @@ const defaultModels: Record<AgentRole, Record<ResearchMode, string>> = {
     }
 };
 
+const openaiModels: Record<AgentRole, Record<ResearchMode, string>> = {
+    planner: {
+        Balanced: 'gpt-4o',
+        DeepDive: 'gpt-4o',
+        Fast: 'gpt-4o-mini',
+        UltraFast: 'gpt-3.5-turbo',
+    },
+    searcher: {
+        Balanced: 'gpt-4o-mini',
+        DeepDive: 'gpt-4o',
+        Fast: 'gpt-4o-mini',
+        UltraFast: 'gpt-3.5-turbo',
+    },
+    synthesizer: {
+        Balanced: 'gpt-4o-mini',
+        DeepDive: 'gpt-4o',
+        Fast: 'gpt-4o-mini',
+        UltraFast: 'gpt-3.5-turbo',
+    },
+    clarification: {
+        Balanced: 'gpt-4o-mini',
+        DeepDive: 'gpt-4o',
+        Fast: 'gpt-4o-mini',
+        UltraFast: 'gpt-3.5-turbo',
+    },
+    visualizer: {
+        Balanced: 'gpt-4o-mini',
+        DeepDive: 'gpt-4o',
+        Fast: 'gpt-4o-mini',
+        UltraFast: 'gpt-3.5-turbo',
+    }
+};
+
+const getProviderModels = (): Record<AgentRole, Record<ResearchMode, string>> => {
+    const provider = settingsService.getSettings().apiConfig.provider;
+    switch (provider) {
+        case 'gemini':
+            return geminiModels;
+        case 'openai':
+        case 'custom':
+            return openaiModels;
+        default:
+            return geminiModels;
+    }
+};
+
 export const getDefaultModelForRole = (role: AgentRole, mode: ResearchMode): string => {
-    return defaultModels[role][mode];
+    const models = getProviderModels();
+    return models[role][mode];
 }
 
 /**

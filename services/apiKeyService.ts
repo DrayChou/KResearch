@@ -12,7 +12,7 @@ class ApiKeyService {
 
     constructor() {
         const envKey = process.env.API_KEY;
-        this.hasEnvKey = !!envKey && envKey.length > 0;
+        this.hasEnvKey = !!envKey && envKey.length > 0 && envKey !== 'undefined';
 
         if (this.hasEnvKey) {
             this.userApiKeys = this.parseKeys(envKey);

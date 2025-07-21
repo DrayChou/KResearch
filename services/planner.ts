@@ -1,4 +1,4 @@
-import { ai } from './geminiClient';
+import { ai } from './openaiClient';
 import { getModel } from './models';
 import { settingsService } from './settingsService';
 import { parseJsonFromMarkdown } from './utils';

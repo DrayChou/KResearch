@@ -1,4 +1,4 @@
-import { ai } from './geminiClient';
+import { ai } from './openaiClient';
 import { getModel } from './models';
 import { parseJsonFromMarkdown } from './utils';
 import { ResearchMode, FileData, ClarificationTurn, Citation } from '../types';
@@ -70,13 +70,14 @@ The user wants to research the impact of recent advancements in large language m
     }
 
     // --- STEP 2: Format the generated text into a structured JSON object ---
+    const escapedText = JSON.stringify(generatedText);
     const formattingPrompt = `Analyze the following text and classify it.
 Your response MUST be a single, valid JSON object and nothing else.
 - If the text is a question, set "type" to "question".
 - If the text is a summary or statement, set "type" to "summary".
 - The "content" key must contain the original, unmodified text.
 
-Text to analyze: "${generatedText}"
+Text to analyze: ${escapedText}
 `;
 
     const clarificationResponseSchema = {
@@ -89,7 +90,7 @@ Text to analyze: "${generatedText}"
     };
 
     const formattingResponse = await ai.models.generateContent({
-        model: 'gemini-2.5-flash-lite-preview-06-17',
+        model: getModel('clarification', mode),
         contents: [{ role: 'user', parts: [{ text: formattingPrompt }] }],
         config: {
             responseMimeType: "application/json",

@@ -1,4 +1,5 @@
 import { apiKeyService } from './apiKeyService';
+import { getAvailableModels } from './openaiClient';
 import { AppSettings } from '../types';
 
 export const DEFAULT_SETTINGS: AppSettings = {
@@ -14,6 +15,11 @@ export const DEFAULT_SETTINGS: AppSettings = {
     maxCycles: 20,
     maxDebateRounds: 20,
   },
+  apiConfig: {
+    provider: 'gemini',
+    baseUrl: null,
+    openaiApiKey: null,
+  },
 };
 
 class SettingsService {
@@ -22,6 +28,12 @@ class SettingsService {
 
   constructor() {
     this.settings = this.load();
+    
+    // Override with environment variables if available
+    const envBaseUrl = process.env.GEMINI_BASE_URL;
+    if (envBaseUrl) {
+      this.settings.apiConfig.baseUrl = envBaseUrl;
+    }
   }
 
   private load(): AppSettings {
@@ -32,6 +44,7 @@ class SettingsService {
         return {
           modelOverrides: { ...DEFAULT_SETTINGS.modelOverrides, ...parsed.modelOverrides },
           researchParams: { ...DEFAULT_SETTINGS.researchParams, ...parsed.researchParams },
+          apiConfig: { ...DEFAULT_SETTINGS.apiConfig, ...parsed.apiConfig },
         };
       }
     } catch (e) {
@@ -44,6 +57,7 @@ class SettingsService {
     const toStore: AppSettings = {
         modelOverrides: newSettings.modelOverrides || this.settings.modelOverrides,
         researchParams: newSettings.researchParams || this.settings.researchParams,
+        apiConfig: newSettings.apiConfig || this.settings.apiConfig,
     };
     try {
       localStorage.setItem('k-research-settings', JSON.stringify(toStore));
@@ -66,44 +80,21 @@ class SettingsService {
     
     if (this.availableModels.length > 0 && !forceRefetch) return this.availableModels;
 
-    const allModelNames = new Set<string>();
-    let lastError: any = null;
-
-    for (const key of apiKeys) {
-        try {
-            const response = await fetch('https://generativelanguage.googleapis.com/v1beta/models?pageSize=50', {
-                headers: { 'x-goog-api-key': key }
-            });
-
-            if (!response.ok) {
-                const errorData = await response.json().catch(() => null);
-                const errorMessage = errorData?.error?.message || response.statusText;
-                throw new Error(`Failed with key ending in ...${key.slice(-4)}: ${errorMessage}`);
-            }
-
-            const data = await response.json() as { models?: { name: string }[] };
-            const modelNames = (data.models || [])
-                .map((m: { name: string }) => m.name.replace(/^models\//, ''))
-                .filter((name: string) => name.includes('gemini'));
-            
-            modelNames.forEach(name => allModelNames.add(name));
-            // We only need one successful key to get the models.
-            lastError = null; 
-            break;
-        } catch (error) {
-            console.warn(`Could not fetch models for one of the keys:`, error);
-            lastError = error;
-        }
+    try {
+        this.availableModels = await getAvailableModels();
+        return this.availableModels;
+    } catch (error) {
+        console.error("Error fetching available models:", error);
+        // Fallback to default Gemini models
+        this.availableModels = [
+            'gemini-2.5-pro',
+            'gemini-2.5-flash',
+            'gemini-2.5-flash-lite-preview-06-17',
+            'gemini-1.5-pro',
+            'gemini-1.5-flash'
+        ];
+        return this.availableModels;
     }
-
-    if (allModelNames.size === 0) {
-        console.error("Error fetching available models from any key:", lastError);
-        this.availableModels = [];
-        throw lastError || new Error("Failed to fetch models from any of the provided API keys.");
-    }
-    
-    this.availableModels = Array.from(allModelNames).sort();
-    return this.availableModels;
   }
 }
 

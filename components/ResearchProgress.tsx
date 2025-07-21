@@ -108,12 +108,12 @@ const ResearchProgress: React.FC<ResearchProgressProps> = ({ updates, isResearch
                              <span className="font-semibold capitalize text-gray-800 dark:text-gray-200">Thought:</span>
                         )}
                        
-                        <span className="ml-1 italic">{String(update.content)}</span>
+                        <span className="ml-1 italic">{Array.isArray(update.content) ? update.content.join(' ') : (typeof update.content === 'object' ? JSON.stringify(update.content) : String(update.content))}</span>
                     </div>
                 ) : (
                     <div>
                     <span className="font-semibold capitalize text-gray-800 dark:text-gray-200">{update.type}:</span>
-                    <span className="ml-1 italic">{String(update.content)}</span>
+                    <span className="ml-1 italic">{Array.isArray(update.content) ? update.content.join(' ') : (typeof update.content === 'object' ? JSON.stringify(update.content) : String(update.content))}</span>
                     </div>
                 )}
                 </div>

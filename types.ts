@@ -26,6 +26,15 @@ export interface ResearchParams {
 export interface AppSettings {
     modelOverrides: ModelOverrides;
     researchParams: ResearchParams;
+    apiConfig: ApiConfig;
+}
+
+export type ApiProvider = 'gemini' | 'openai' | 'custom';
+
+export interface ApiConfig {
+    provider: ApiProvider;
+    baseUrl: string | null;
+    openaiApiKey: string | null;
 }
 
 export interface ClarificationTurn {

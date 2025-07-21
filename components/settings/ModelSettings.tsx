@@ -16,6 +16,8 @@ const ModelSettings: React.FC<ModelSettingsProps> = ({ settings, setSettings, cu
     const [availableModels, setAvailableModels] = useState<string[]>([]);
     const [isLoadingModels, setIsLoadingModels] = useState(false);
     const [modelsError, setModelsError] = useState<string | null>(null);
+    const [customModels, setCustomModels] = useState<{[key in AgentRole]?: string}>({});
+    const [isCustomInput, setIsCustomInput] = useState<{[key in AgentRole]?: boolean}>({});
 
     const fetchModels = useCallback(async (force = false) => {
         setIsLoadingModels(true);
@@ -36,10 +38,31 @@ const ModelSettings: React.FC<ModelSettingsProps> = ({ settings, setSettings, cu
 
 
     const handleModelOverrideChange = (role: AgentRole, value: string) => {
+        if (value === 'custom') {
+            setIsCustomInput(prev => ({ ...prev, [role]: true }));
+            setCustomModels(prev => ({ ...prev, [role]: settings.modelOverrides[role] || '' }));
+        } else {
+            setIsCustomInput(prev => ({ ...prev, [role]: false }));
+            setSettings(prev => ({
+                ...prev,
+                modelOverrides: { ...prev.modelOverrides, [role]: value === 'default' ? null : value }
+            }));
+        }
+    };
+
+    const handleCustomModelChange = (role: AgentRole, value: string) => {
+        setCustomModels(prev => ({ ...prev, [role]: value }));
         setSettings(prev => ({
             ...prev,
-            modelOverrides: { ...prev.modelOverrides, [role]: value === 'default' ? null : value }
+            modelOverrides: { ...prev.modelOverrides, [role]: value.trim() || null }
         }));
+    };
+
+    const handleCustomModelSubmit = (role: AgentRole) => {
+        const customModel = customModels[role]?.trim();
+        if (customModel) {
+            setIsCustomInput(prev => ({ ...prev, [role]: false }));
+        }
     };
 
     return (
@@ -60,13 +83,83 @@ const ModelSettings: React.FC<ModelSettingsProps> = ({ settings, setSettings, cu
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 {AGENT_ROLES.map(role => {
                     const defaultModelName = getDefaultModelForRole(role, currentMode);
+                    const currentValue = settings.modelOverrides[role];
+                    const isModelInList = !currentValue || availableModels.includes(currentValue);
+                    const selectValue = isCustomInput[role] ? 'custom' : (isModelInList ? (currentValue || 'default') : 'custom');
+                    
                     return (
-                        <div key={role} className="space-y-1">
+                        <div key={role} className="space-y-2">
                             <label htmlFor={`model-${role}`} className="font-semibold text-gray-700 dark:text-gray-300 capitalize text-sm">{role}</label>
-                            <select id={`model-${role}`} value={settings.modelOverrides[role] || 'default'} onChange={e => handleModelOverrideChange(role, e.target.value)} disabled={isLoadingModels || availableModels.length === 0} className="w-full p-2 rounded-2xl bg-white/60 dark:bg-black/20 border border-transparent focus:border-glow-light dark:focus:border-glow-dark focus:ring-1 focus:ring-glow-light/50 dark:focus:ring-glow-dark/50 focus:outline-none transition-all text-sm disabled:opacity-50">
-                                <option value="default">{`Default (${defaultModelName})`}</option>
-                                {availableModels.map(modelName => <option key={modelName} value={modelName}>{modelName}</option>)}
-                            </select>
+                            
+                            {!isCustomInput[role] ? (
+                                <select 
+                                    id={`model-${role}`} 
+                                    value={selectValue}
+                                    onChange={e => handleModelOverrideChange(role, e.target.value)} 
+                                    disabled={isLoadingModels} 
+                                    className="w-full p-2 rounded-2xl bg-white/60 dark:bg-black/20 border border-transparent focus:border-glow-light dark:focus:border-glow-dark focus:ring-1 focus:ring-glow-light/50 dark:focus:ring-glow-dark/50 focus:outline-none transition-all text-sm disabled:opacity-50"
+                                >
+                                    <option value="default">{`Default (${defaultModelName})`}</option>
+                                    {availableModels.map(modelName => (
+                                        <option key={modelName} value={modelName}>{modelName}</option>
+                                    ))}
+                                    <option value="custom">🖊️ Custom Model Name...</option>
+                                </select>
+                            ) : (
+                                <div className="relative">
+                                    <input
+                                        type="text"
+                                        value={customModels[role] || ''}
+                                        onChange={e => handleCustomModelChange(role, e.target.value)}
+                                        onKeyDown={e => {
+                                            if (e.key === 'Enter') {
+                                                handleCustomModelSubmit(role);
+                                            } else if (e.key === 'Escape') {
+                                                setIsCustomInput(prev => ({ ...prev, [role]: false }));
+                                            }
+                                        }}
+                                        placeholder="Enter model name (e.g., claude-3-5-sonnet-20241022)"
+                                        className="w-full p-2 pr-20 rounded-2xl bg-white/60 dark:bg-black/20 border border-transparent focus:border-glow-light dark:focus:border-glow-dark focus:ring-1 focus:ring-glow-light/50 dark:focus:ring-glow-dark/50 focus:outline-none transition-all text-sm"
+                                        autoFocus
+                                    />
+                                    <div className="absolute right-2 top-1/2 transform -translate-y-1/2 flex gap-1">
+                                        <button
+                                            onClick={() => handleCustomModelSubmit(role)}
+                                            className="p-1 rounded-full hover:bg-green-500/20 text-green-600 dark:text-green-400 transition-colors"
+                                            title="Confirm"
+                                        >
+                                            <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
+                                            </svg>
+                                        </button>
+                                        <button
+                                            onClick={() => setIsCustomInput(prev => ({ ...prev, [role]: false }))}
+                                            className="p-1 rounded-full hover:bg-red-500/20 text-red-600 dark:text-red-400 transition-colors"
+                                            title="Cancel"
+                                        >
+                                            <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+                                            </svg>
+                                        </button>
+                                    </div>
+                                </div>
+                            )}
+                            
+                            {/* Show current custom model if it's not in the list */}
+                            {currentValue && !isModelInList && !isCustomInput[role] && (
+                                <div className="text-xs text-blue-600 dark:text-blue-400 bg-blue-500/10 px-2 py-1 rounded-lg">
+                                    Custom: <code className="bg-blue-500/20 px-1 rounded">{currentValue}</code>
+                                    <button
+                                        onClick={() => {
+                                            setCustomModels(prev => ({ ...prev, [role]: currentValue }));
+                                            setIsCustomInput(prev => ({ ...prev, [role]: true }));
+                                        }}
+                                        className="ml-2 text-blue-600 dark:text-blue-400 hover:underline"
+                                    >
+                                        Edit
+                                    </button>
+                                </div>
+                            )}
                         </div>
                     );
                 })}
